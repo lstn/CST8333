@@ -178,14 +178,14 @@ func showMenu() int {
 
 	fmt.Println("\nLucas Estienne's Canadian Cheese Directory App")
 	fmt.Println("Please choose from the following options:")
-	fmt.Println(" 1. Reload the data")
-	fmt.Println(" 2. Persist the in-memory data to file")
-	fmt.Println(" 3. Display all records")
-	fmt.Println(" 4. Create a new record")
-	fmt.Println(" 5. Display a record")
-	fmt.Println(" 6. Edit a record")
-	fmt.Println(" 7. Delete a record")
-	fmt.Println(" 8. Exit")
+	fmt.Printf(" %d. Reload the data\n", OptionReload)
+	fmt.Printf(" %d. Persist the in-memory data to file\n", OptionPersist)
+	fmt.Printf(" %d. Display all records\n", OptionDisplayAll)
+	fmt.Printf(" %d. Create a new record\n", OptionCreate)
+	fmt.Printf(" %d. Display a record\n", OptionDisplay)
+	fmt.Printf(" %d. Edit a record\n", OptionEdit)
+	fmt.Printf(" %d. Delete a record\n", OptionDelete)
+	fmt.Printf(" %d. Exit\n", OptionExit)
 
 	// loop until selection is valid
 	for selection == 0 {
@@ -196,7 +196,7 @@ func showMenu() int {
 		if err != nil {
 			selection = 0
 			fmt.Println("\nPlease enter a valid option.")
-		} else if selection < 1 || selection > 8 {
+		} else if selection < OptionReload || selection > OptionExit {
 			selection = 0
 			fmt.Println("\nPlease enter a valid integer between 1 and 8.")
 		}
