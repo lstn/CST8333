@@ -50,7 +50,10 @@ func main() {
 	// record id to retrieve at the end
 	rid := 1
 
+	// insert records into DB
 	insertRecords(records, database)
+
+	// get record at rid in cheeses table
 	r := getCheeseByRecordId(rid, database)
 
 
