@@ -76,14 +76,14 @@ func main() {
 			case OptionPersist:
 				persistToFile(records, "cheese_directory_output.csv")
 			case OptionDisplayAll:
-				displayAllRecords(records)
+				displayAllRecords(database)
 			case OptionCreate:
 				// create record
 				records = createRecord(records)
 				// sync in-memory records data structure with database 
 				syncDb(records, database)
 			case OptionDisplay:
-				displayRecord(records)
+				displayRecord(database)
 			case OptionEdit:
 				// edit record
 				editRecord(records)
@@ -293,18 +293,21 @@ func showMenu() int {
 }
 
 // function to display all records
-func displayAllRecords(records []Record) {
+func displayAllRecords(database *sql.DB) {
 	fmt.Printf("\nDisplaying all records...\n\n")
 
-	for i := 0; i < len(records); i++ {
-		fmt.Printf("Record ID: %d: %+v\n", i, records[i])
+	rs := getAllCheeses(database)
+
+	for i := 0; i < len(rs); i++ {
+		fmt.Printf("Record ID: %d: %+v\n", i, rs[i])
 		time.Sleep(5 * time.Millisecond) // 5ms between records
 	}
 }
 
 // function to display a specific record
-func displayRecord(records []Record) {
+func displayRecord(database *sql.DB) {
 	id := -1
+	count := getCheeseCount(database)
 
 	// loop until ID is valid
 	for id == -1 {
@@ -315,14 +318,16 @@ func displayRecord(records []Record) {
 		if err != nil {
 			id = -1
 			fmt.Println("\nPlease enter a valid integer.")
-		} else if id < 0 || id > len(records)-1 {
+		} else if id < 0 || id > count-1 {
 			id = -1
-			fmt.Printf("\nPlease enter a valid record ID between 0 and %d.\n", len(records)-1)
+			fmt.Printf("\nPlease enter a valid record ID between 0 and %d.\n", count-1)
 		}
 	}
 
+	r := getCheeseByRecordId(id, database)
+
 	// display record
-	fmt.Printf("\n Displaying Record #%d: \n%+v\n", id, records[id])
+	fmt.Printf("\n Displaying Record #%d: \n%+v\n", id, r)
 }
 
 // helper function to delete an element from a Record slice and keep order
@@ -584,4 +589,176 @@ func editRecord(records []Record) []Record {
 
 	// return our amended records slice
 	return records
+}
+
+// function to select cheese by record id from database
+func getCheeseByRecordId(id int, database *sql.DB) Record {
+
+	var (
+		cheeseId int
+		cheeseName string
+		manufacturerName string
+		manufacturerProvCode string
+		manufacturingType string
+		website string
+		fatContentPercent float32
+		moisturePercent float32
+		particularities string
+		flavour string
+		characteristics string
+		ripening string
+		organic bool
+		categoryType string
+		milkType string
+		milkTreatmentType string
+		rindType string
+		lastUpdateDate string
+	)
+
+	// prepare select
+	statement, _ := database.Prepare(`
+		SELECT cheese_id, cheese_name, manufacturer_name, manufacturer_prov_code,
+		manufacturing_type, website, fat_content_percent, moisture_percent,
+		particularities, flavour, characteristics, ripening,
+		organic, category_type, milk_type, milk_treatment_type,
+		rind_type, last_update_date FROM cheeses WHERE id = $1
+	`)
+	// query select
+	rows, _ := statement.Query(id)
+
+	// loop through resultset
+	for rows.Next() {
+		err := rows.Scan(
+			&cheeseId, &cheeseName, &manufacturerName, &manufacturerProvCode,
+			&manufacturingType, &website, &fatContentPercent, &moisturePercent,
+			&particularities, &flavour, &characteristics, &ripening,
+			&organic, &categoryType, &milkType, &milkTreatmentType,
+			&rindType, &lastUpdateDate,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}	
+	r := Record {
+		CheeseId: int(cheeseId),
+		CheeseName: cheeseName,
+		ManufacturerName: manufacturerName,
+		ManufacturerProvCode: manufacturerProvCode,
+		ManufacturingType: manufacturingType,
+		WebSite: website,
+		FatContentPercent: float32(fatContentPercent),
+		MoisturePercent: float32(moisturePercent),
+		Particularities: particularities,
+		Flavour: flavour,
+		Characteristics: characteristics,
+		Ripening: ripening,
+		Organic: organic,
+		CategoryType: categoryType,
+		MilkType: milkType,
+		MilkTreatmentType: milkTreatmentType,
+		RindType: rindType,
+		LastUpdateDate: lastUpdateDate,
+	}
+	return r
+}
+
+// function to select all cheeses from database
+func getAllCheeses(database *sql.DB) []Record {
+
+	var (
+		cheeseId int
+		cheeseName string
+		manufacturerName string
+		manufacturerProvCode string
+		manufacturingType string
+		website string
+		fatContentPercent float32
+		moisturePercent float32
+		particularities string
+		flavour string
+		characteristics string
+		ripening string
+		organic bool
+		categoryType string
+		milkType string
+		milkTreatmentType string
+		rindType string
+		lastUpdateDate string
+	)
+
+	var rs []Record
+
+	// prepare select
+	statement, _ := database.Prepare(`
+		SELECT cheese_id, cheese_name, manufacturer_name, manufacturer_prov_code,
+		manufacturing_type, website, fat_content_percent, moisture_percent,
+		particularities, flavour, characteristics, ripening,
+		organic, category_type, milk_type, milk_treatment_type,
+		rind_type, last_update_date FROM cheeses ORDER BY id ASC
+	`)
+	// query select
+	rows, _ := statement.Query()
+
+	//loop through resultset
+	for rows.Next() {
+		err := rows.Scan(
+			&cheeseId, &cheeseName, &manufacturerName, &manufacturerProvCode,
+			&manufacturingType, &website, &fatContentPercent, &moisturePercent,
+			&particularities, &flavour, &characteristics, &ripening,
+			&organic, &categoryType, &milkType, &milkTreatmentType,
+			&rindType, &lastUpdateDate,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// append to our resulting record slice
+		rs = append(rs, Record {
+			CheeseId: int(cheeseId),
+			CheeseName: cheeseName,
+			ManufacturerName: manufacturerName,
+			ManufacturerProvCode: manufacturerProvCode,
+			ManufacturingType: manufacturingType,
+			WebSite: website,
+			FatContentPercent: float32(fatContentPercent),
+			MoisturePercent: float32(moisturePercent),
+			Particularities: particularities,
+			Flavour: flavour,
+			Characteristics: characteristics,
+			Ripening: ripening,
+			Organic: organic,
+			CategoryType: categoryType,
+			MilkType: milkType,
+			MilkTreatmentType: milkTreatmentType,
+			RindType: rindType,
+			LastUpdateDate: lastUpdateDate,
+		})
+	}	
+
+	return rs
+}
+
+
+// function to select the count of cheeses from database
+func getCheeseCount(database *sql.DB) int {
+	var count int
+
+	// prepare select
+	statement, _ := database.Prepare(`
+		SELECT count(*) FROM cheeses
+	`)
+	// query select
+	rows, _ := statement.Query()
+
+	// loop through resultset
+	for rows.Next() {
+		err := rows.Scan(
+			&count,
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	return count
 }
