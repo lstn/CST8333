@@ -5,12 +5,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"database/sql"
 	"log"
 	"time"
 	"bufio"
 	"strings"
 	"strconv"
 	"encoding/csv"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 const NumRecordsToLoad = 10000
@@ -53,7 +56,12 @@ func main() {
 
 	// load data
 	records := loadData("data/canadianCheeseDirectory.csv", NumRecordsToLoad)
-	
+
+	// init db
+	database := initCheesesDatabase("./cheesedir.db")
+
+	// sync in-memory records data structure with database 
+	syncDb(records, database)
 
 	// loop until exit
 	for true {
@@ -61,19 +69,31 @@ func main() {
 		switch selection := showMenu(); selection {
 			case OptionReload:
 				fmt.Println("Reloading data...")
+				// reload records
 				records = loadData("data/canadianCheeseDirectory.csv", NumRecordsToLoad)
+				// sync in-memory records data structure with database 
+				syncDb(records, database)
 			case OptionPersist:
 				persistToFile(records, "cheese_directory_output.csv")
 			case OptionDisplayAll:
 				displayAllRecords(records)
 			case OptionCreate:
+				// create record
 				records = createRecord(records)
+				// sync in-memory records data structure with database 
+				syncDb(records, database)
 			case OptionDisplay:
 				displayRecord(records)
 			case OptionEdit:
+				// edit record
 				editRecord(records)
+				// sync in-memory records data structure with database 
+				syncDb(records, database)
 			case OptionDelete:
+				// delete record
 				records = deleteRecord(records)
+				// sync in-memory records data structure with database 
+				syncDb(records, database)
 			case OptionExit:
 				fmt.Println("Goodbye")
 				return
@@ -82,6 +102,73 @@ func main() {
 
 	}
 	
+}
+
+// function to open/initialize cheeses database
+func initCheesesDatabase(filePath string) *sql.DB {
+	// open db
+	database, _ := sql.Open("sqlite3", filePath)
+
+	// create table if not exist
+	statement, _ := database.Prepare(`
+		CREATE TABLE IF NOT EXISTS cheeses (
+			id INTEGER PRIMARY KEY,
+			cheese_id INTEGER,
+			cheese_name TEXT,
+			manufacturer_name TEXT,
+			manufacturer_prov_code TEXT,
+			manufacturing_type TEXT,
+			website TEXT,
+			fat_content_percent REAL,
+			moisture_percent REAL,
+			particularities TEXT,
+			flavour TEXT,
+			characteristics TEXT,
+			ripening TEXT,
+			organic INTEGER,
+			category_type TEXT,
+			milk_type TEXT,
+			milk_treatment_type TEXT,
+			rind_type TEXT,
+			last_update_date TEXT
+		)
+	`)
+	statement.Exec()
+
+	return database
+}
+
+// function to sync in-memory records data structure with database table
+func syncDb(records []Record, database *sql.DB) {
+
+	// prepare delete statement for records currently in table
+	statement, _ := database.Prepare(`
+		DELETE FROM cheeses;
+	`)
+	// exec delete
+	statement.Exec()
+
+	// loop through all records
+	for i := 0; i < len(records); i++ {
+		// prepare insert
+		statement, _ = database.Prepare(`
+			INSERT INTO cheeses (
+				cheese_id, cheese_name, manufacturer_name, manufacturer_prov_code,
+				manufacturing_type, website, fat_content_percent, moisture_percent,
+				particularities, flavour, characteristics, ripening,
+				organic, category_type, milk_type, milk_treatment_type,
+				rind_type, last_update_date
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`)
+		// exec insert
+		statement.Exec(
+			records[i].CheeseId, records[i].CheeseName, records[i].ManufacturerName, records[i].ManufacturerProvCode,
+			records[i].ManufacturingType, records[i].WebSite, records[i].FatContentPercent, records[i].MoisturePercent,
+			records[i].Particularities, records[i].Flavour, records[i].Characteristics, records[i].Ripening,
+			records[i].Organic, records[i].CategoryType, records[i].MilkType, records[i].MilkTreatmentType,
+			records[i].RindType, records[i].LastUpdateDate,
+		)
+	}
 }
 
 // helper function to do error handling
