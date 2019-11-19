@@ -74,7 +74,7 @@ func main() {
 				// sync in-memory records data structure with database 
 				syncDb(records, database)
 			case OptionPersist:
-				persistToFile(records, "cheese_directory_output.csv")
+				persistToFile(database, "cheese_directory_output.csv")
 			case OptionDisplayAll:
 				displayAllRecords(database)
 			case OptionCreate:
@@ -266,10 +266,10 @@ func showMenu() int {
 	fmt.Println("\nLucas Estienne's Canadian Cheese Directory App")
 	fmt.Println("Please choose from the following options:")
 	fmt.Printf(" %d. Reload the data\n", OptionReload)
-	fmt.Printf(" %d. Persist the in-memory data to file\n", OptionPersist)
-	fmt.Printf(" %d. Display all records\n", OptionDisplayAll)
+	fmt.Printf(" %d. Persist the records in database to file\n", OptionPersist)
+	fmt.Printf(" %d. Display all records from database\n", OptionDisplayAll)
 	fmt.Printf(" %d. Create a new record\n", OptionCreate)
-	fmt.Printf(" %d. Display a record\n", OptionDisplay)
+	fmt.Printf(" %d. Display a record from database\n", OptionDisplay)
 	fmt.Printf(" %d. Edit a record\n", OptionEdit)
 	fmt.Printf(" %d. Delete a record\n", OptionDelete)
 	fmt.Printf(" %d. Exit\n", OptionExit)
@@ -294,7 +294,7 @@ func showMenu() int {
 
 // function to display all records
 func displayAllRecords(database *sql.DB) {
-	fmt.Printf("\nDisplaying all records...\n\n")
+	fmt.Printf("\nDisplaying all records from database...\n\n")
 
 	rs := getAllCheeses(database)
 
@@ -327,7 +327,7 @@ func displayRecord(database *sql.DB) {
 	r := getCheeseByRecordId(id, database)
 
 	// display record
-	fmt.Printf("\n Displaying Record #%d: \n%+v\n", id, r)
+	fmt.Printf("\n Displaying Record #%d from database: \n%+v\n", id, r)
 }
 
 // helper function to delete an element from a Record slice and keep order
@@ -457,9 +457,11 @@ func recordToSlice(record Record) []string {
 }
 
 // function to write in-memory records to file
-func persistToFile(records []Record, filePath string) {
+func persistToFile(database *sql.DB, filePath string) {
 
-	fmt.Printf("\n Writing all in-memory records to %s.\n", filePath)
+	fmt.Printf("\n Writing all database records to %s.\n", filePath)
+
+	rs := getAllCheeses(database)
 
 	headers := 	[]string { 
 		"CheeseId", "CheeseName", "ManufacturerName", "ManufacturerProvCode", "ManufacturingType",
@@ -481,8 +483,8 @@ func persistToFile(records []Record, filePath string) {
 	check(err)
 
 	// loop through records and write each one to the CSV
-	for i := 0; i < len(records); i++ {
-		err = writer.Write(recordToSlice(records[i]))
+	for i := 0; i < len(rs); i++ {
+		err = writer.Write(recordToSlice(rs[i]))
 		check(err)
 	}
 
