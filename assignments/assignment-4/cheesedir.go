@@ -12,6 +12,7 @@ import (
 	"strings"
 	"strconv"
 	"encoding/csv"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -267,7 +268,7 @@ func showMenu() int {
 	fmt.Println("Please choose from the following options:")
 	fmt.Printf(" %d. Reload the data\n", OptionReload)
 	fmt.Printf(" %d. Persist the records in database to file\n", OptionPersist)
-	fmt.Printf(" %d. Display all records from database\n", OptionDisplayAll)
+	fmt.Printf(" %d. Display all records from database (uses multithreading)\n", OptionDisplayAll)
 	fmt.Printf(" %d. Create a new record\n", OptionCreate)
 	fmt.Printf(" %d. Display a record from database\n", OptionDisplay)
 	fmt.Printf(" %d. Edit a record\n", OptionEdit)
@@ -294,13 +295,20 @@ func showMenu() int {
 
 // function to display all records
 func displayAllRecords(database *sql.DB) {
-	fmt.Printf("\nDisplaying all records from database...\n\n")
+	fmt.Printf("\nDisplaying all records from database, multithreaded...\n\n")
 
+	var wg sync.WaitGroup
 	rs := getAllCheeses(database)
+	// Tell the waitgroup how many threads are about to run concurrently.
+	wg.Add(len(rs))
 
 	for i := 0; i < len(rs); i++ {
-		fmt.Printf("Record ID: %d: %+v\n", i, rs[i])
-		time.Sleep(5 * time.Millisecond) // 5ms between records
+		// Spawn a thread (goroutine) for each iteration in the loop.
+		go func(id int, r Record) {
+			// At the end of the goroutine, tell the waitgroup that the thread has completed
+			defer wg.Done()
+			fmt.Printf("Record ID: %d: %+v\n", id, r)
+		}(i, rs[i])
 	}
 }
 
