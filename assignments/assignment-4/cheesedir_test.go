@@ -71,7 +71,7 @@ func TestGetCheeseByRecordId(t *testing.T) {
 	// init db
 	database := initCheesesDatabase("./cheesedir-test.db")
 	// insert records into DB
-	insertRecords(records, database)
+	syncDb(records, database)
 	// record id to test
 	rid := 1
 
