@@ -11,7 +11,7 @@ func TestLoadData(t *testing.T) {
 
 	// create a record with the proper data
 	firstRecord := Record {
-		CheeseId: 228,
+		CheeseId: 226,
 		CheeseName: "Sieur de Duplessis (Le)",
 		ManufacturerName: "Fromages la faim de loup",
 		ManufacturerProvCode: "NB",
